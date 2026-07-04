@@ -1,0 +1,119 @@
+# ============================================================================
+# config.yaml — the single source of truth for tunable settings.
+#
+# WHY a config file? So you never hard-code magic numbers in scripts. Every
+# script reads this file, which means (a) experiments are reproducible, and
+# (b) you change a setting in ONE place and the whole pipeline follows.
+#
+# Every value below is read by the code in src/. Comments explain the "why".
+# ============================================================================
+
+project:
+  name: "diabetic-retinopathy"
+  seed: 42            # Global random seed. Fixing it makes runs repeatable.
+
+# ----------------------------------------------------------------------------
+# Paths. These are RELATIVE to the repo root. The drop-in dataset (APTOS 2019)
+# is expected under data/ — see data/README.md for the exact layout.
+# ----------------------------------------------------------------------------
+paths:
+  data_dir: "data/aptos2019"          # Root of the APTOS dataset
+  train_csv: "data/aptos2019/train.csv"      # columns: id_code, diagnosis
+  train_images: "data/aptos2019/train_images" # <id_code>.png files
+  test_csv: "data/aptos2019/test.csv"         # optional (APTOS public test has no labels)
+  test_images: "data/aptos2019/test_images"   # optional
+  models_dir: "models"                # where checkpoints (.pt) are saved
+  reports_dir: "reports"              # metrics.json, logs
+  figures_dir: "reports/figures"      # all generated plots
+
+# ----------------------------------------------------------------------------
+# Class definitions — the ICDR (International Clinical Diabetic Retinopathy)
+# 0–4 ordinal grading scale. "Ordinal" means the order matters: grade 3 is
+# worse than grade 1, and confusing 0 with 4 is a bigger mistake than
+# confusing 0 with 1. (This is why we report Quadratic Weighted Kappa later.)
+# ----------------------------------------------------------------------------
+classes:
+  num_classes: 5
+  names:
+    - "0 - No DR"
+    - "1 - Mild"
+    - "2 - Moderate"
+    - "3 - Severe"
+    - "4 - Proliferative DR"
+  # "Referable DR" = grade >= 2. This is a clinically meaningful binary view:
+  # patients at grade >= 2 generally should be referred to an ophthalmologist.
+  referable_threshold: 2
+
+# ----------------------------------------------------------------------------
+# Image settings
+# ----------------------------------------------------------------------------
+image:
+  size: 224            # 224x224 matches ImageNet-pretrained backbones.
+                       # WHY 224 (not 512)? Faster training, lower memory, and
+                       # transfer-learning weights expect ~224. 512 can improve
+                       # accuracy on fine lesions but costs ~5x compute. Start
+                       # at 224; bump to 384/512 later if you have GPU budget.
+  channels: 3
+  # ImageNet normalization stats — REQUIRED when using pretrained backbones,
+  # because those weights were trained on images normalized this way.
+  mean: [0.485, 0.456, 0.406]
+  std:  [0.229, 0.224, 0.225]
+
+# ----------------------------------------------------------------------------
+# Preprocessing toggles (implemented in src/preprocess.py)
+# ----------------------------------------------------------------------------
+preprocess:
+  crop_fov: true        # crop the circular retina, trim black borders
+  ben_graham: true      # Ben-Graham local-average color normalization
+  ben_graham_sigma: 10  # blur radius for the local average
+  clahe: false          # CLAHE contrast enhancement (off by default; can fight Ben-Graham)
+  clahe_clip: 2.0
+  clahe_grid: 8
+
+# ----------------------------------------------------------------------------
+# Data split (stratified so each split keeps the same class proportions)
+# ----------------------------------------------------------------------------
+split:
+  val_size: 0.15
+  test_size: 0.15
+  stratify: true
+
+# ----------------------------------------------------------------------------
+# Training hyperparameters
+# ----------------------------------------------------------------------------
+train:
+  batch_size: 32
+  epochs: 30
+  lr: 0.0003            # AdamW learning rate
+  weight_decay: 0.0001
+  optimizer: "adamw"
+  scheduler: "cosine"   # "cosine" | "plateau" | "none"
+  warmup_epochs: 1
+  early_stop_patience: 7  # stop if val metric doesn't improve for N epochs
+  early_stop_metric: "qwk" # "qwk" | "macro_f1" | "val_loss"
+  amp: true             # mixed precision — auto-disabled if no GPU
+  num_workers: 2
+  grad_clip: 5.0
+
+# ----------------------------------------------------------------------------
+# Class-imbalance handling. APTOS is heavily skewed toward "No DR".
+# Choose ONE primary strategy; you can also combine weighted loss + sampler.
+#   - "weighted_loss": scale CrossEntropy by inverse class frequency
+#   - "sampler": WeightedRandomSampler oversamples rare grades
+#   - "focal": focal loss (down-weights easy examples)
+#   - "none": no correction (baseline, expect it to ignore rare grades)
+# ----------------------------------------------------------------------------
+imbalance:
+  strategy: "weighted_loss"
+  use_sampler: false
+  focal_gamma: 2.0
+
+# ----------------------------------------------------------------------------
+# Model selection. Used by train.py / evaluate.py / the app.
+#   custom_cnn | resnet50 | efficientnet_b0 | efficientnet_b3 | densenet121
+# ----------------------------------------------------------------------------
+model:
+  name: "resnet50"
+  pretrained: true
+  dropout: 0.3
+  freeze_backbone: false  # true = feature-extraction only (train head); false = full fine-tune

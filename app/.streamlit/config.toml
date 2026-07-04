@@ -1,0 +1,15 @@
+# ============================================================================
+# Streamlit theme — a calm, medical color palette.
+# WHY a theme file? So the app's look is consistent and version-controlled,
+# rather than relying on Streamlit's default purple.
+# ============================================================================
+[theme]
+base = "light"
+primaryColor = "#2A9D8F"          # calm teal — actions / highlights
+backgroundColor = "#FFFFFF"        # clean white canvas
+secondaryBackgroundColor = "#F1F5F6"  # muted panel background
+textColor = "#1F2A33"             # near-black, high contrast for readability
+font = "sans serif"
+
+[server]
+maxUploadSize = 10                 # MB — fundus images are small; cap uploads

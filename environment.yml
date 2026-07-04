@@ -1,0 +1,21 @@
+# ============================================================================
+# Optional conda environment. Use this if you prefer conda over pip/venv.
+#
+#   conda env create -f environment.yml
+#   conda activate dr
+#
+# NOTE: On Google Colab you do NOT need this file — Colab already has a Python
+# environment, so you just `pip install -r requirements.txt`. This file is for
+# people running locally who like conda.
+# ============================================================================
+name: dr
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip=24.0
+  # Install everything else via pip so versions match requirements.txt exactly.
+  - pip:
+      - -r requirements.txt

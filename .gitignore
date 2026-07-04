@@ -1,0 +1,56 @@
+# ============================================================================
+# .gitignore — keep big/generated files out of version control.
+# WHY: datasets and model weights are large and shouldn't live in git. The
+# README explains how to download data and where to get trained weights.
+# ============================================================================
+
+# --- Datasets (never commit raw data) ---
+/data/*
+!/data/README.md          # but DO keep the explanation of expected layout
+
+# --- Model weights / checkpoints ---
+/models/
+*.pt
+*.pth
+*.ckpt
+*.onnx
+
+# --- Generated reports (optional: keep figures if you want them in README) ---
+reports/*.json
+reports/*.csv
+reports/logs/
+# Keep reports/figures/ so README screenshots/plots render on GitHub:
+!reports/figures/
+!reports/figures/**
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# --- Notebooks ---
+.ipynb_checkpoints/
+
+# --- Environments ---
+.venv/
+venv/
+env/
+.conda/
+
+# --- OS / editor cruft ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# --- Testing / CI artifacts ---
+.pytest_cache/
+.coverage
+htmlcov/
+reports/figures/gradcam_*/
+
+# --- Local tool settings ---
+.claude/

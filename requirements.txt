@@ -1,0 +1,43 @@
+# ============================================================================
+# Pinned dependencies for "Deep Learning for Early Detection of Diabetic
+# Retinopathy". Versions are chosen to work together on Google Colab
+# (Python 3.10/3.11, CUDA 12.x runtime) as of mid-2026.
+#
+# WHY pin versions? Reproducibility. An unpinned `pip install torch` could
+# install a different version next month and silently change results or break
+# the API. Pinning means a fresh clone behaves the same way months from now.
+#
+# If a version is unavailable in your environment, relax the `==` to `>=`
+# for that single line rather than changing everything at once.
+# ============================================================================
+
+# --- Deep learning core (PyTorch) ---
+torch==2.3.1
+torchvision==0.18.1
+
+# --- Numerics / data handling ---
+numpy==1.26.4
+pandas==2.2.2
+
+# --- Image processing ---
+opencv-python==4.10.0.84
+pillow==10.3.0
+albumentations==1.4.10
+albucore==0.0.13   # pinned to match albumentations 1.4.10 (Colab compat)
+
+# --- Classical ML metrics / utilities ---
+scikit-learn==1.5.0
+
+# --- Plotting ---
+matplotlib==3.9.0
+seaborn==0.13.2
+
+# --- Explainability (Grad-CAM) ---
+grad-cam==1.5.0
+
+# --- Web app ---
+streamlit==1.35.0
+
+# --- Config / progress / misc ---
+pyyaml==6.0.1
+tqdm==4.66.4

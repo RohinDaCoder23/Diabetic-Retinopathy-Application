@@ -1,0 +1,50 @@
+# ============================================================================
+# Continuous Integration — proves the code stays runnable on every push.
+#
+# Two jobs:
+#   1) offline-core : minimal deps (numpy/opencv/pandas/pyyaml) -> runs the
+#      dependency-light offline checks. Fast, catches image-pipeline breakage.
+#   2) full-suite   : installs the full requirements + pytest, then runs the
+#      ENTIRE test suite INCLUDING the end-to-end train -> evaluate -> inference
+#      -> Grad-CAM tests on a tiny synthetic dataset (CPU only, no data download,
+#      no ImageNet weights). This is the real guarantee that the pipeline works.
+# ============================================================================
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  offline-core:
+    name: Offline core checks (light deps)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install light deps
+        run: pip install numpy pandas opencv-python-headless pyyaml
+      - name: Run offline checks
+        run: python tests/run_offline_checks.py
+
+  full-suite:
+    name: Full pytest suite (train -> evaluate -> inference)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+      - name: Install project (CPU PyTorch)
+        run: |
+          python -m pip install --upgrade pip
+          # Use the CPU wheel index so no CUDA build is pulled on the runner.
+          pip install --extra-index-url https://download.pytorch.org/whl/cpu \
+            -r requirements.txt -r requirements-dev.txt
+      - name: Run the whole test suite (incl. slow end-to-end)
+        run: pytest -q
