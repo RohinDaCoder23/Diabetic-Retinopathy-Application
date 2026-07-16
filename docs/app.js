@@ -21,7 +21,13 @@ let gradeSession = null, lesionSession = null, cvReady = false;
 function $(id){ return document.getElementById(id); }
 function status(msg, kind){ const s=$("status"); s.textContent=msg; s.className="status "+(kind||""); }
 
-window.onOpenCvReady = function(){ cvReady = true; status("Ready — upload a fundus image.", "ok"); };
+function waitForOpenCV(tries){
+  tries = tries || 0;
+  if (typeof cv !== "undefined" && cv && cv.Mat){ cvReady = true; status("Ready — upload a fundus image.", "ok"); return; }
+  if (window.__cvFailed){ status("Could not load OpenCV.js — check your connection or disable an ad-blocker, then reload.", "err"); return; }
+  if (tries > 400){ status("OpenCV is taking unusually long to load. Check your connection and reload.", "err"); return; }
+  setTimeout(function(){ waitForOpenCV(tries + 1); }, 200);
+}
 
 async function ensureSessions(){
   if (typeof ort !== "undefined" && ort.env && ort.env.wasm){
@@ -243,4 +249,5 @@ window.addEventListener("DOMContentLoaded", () => {
   const fi = $("fileInput");
   fi.addEventListener("change", e => { if (e.target.files[0]) analyze(e.target.files[0]); });
   status("Loading OpenCV…");
+  waitForOpenCV();
 });
