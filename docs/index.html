@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Diabetic Retinopathy Detector</title>
+<style>
+  :root{ --teal:#2A9D8F; --ink:#1F2A33; --muted:#5b6b73; --bg:#f6f9f9; --card:#fff; --line:#e6ebec; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+        color:var(--ink); background:var(--bg); line-height:1.5; }
+  .wrap{ max-width:900px; margin:0 auto; padding:1rem 1rem 3rem; }
+  .hero{ background:linear-gradient(135deg,#2A9D8F,#264653); color:#fff;
+         border-radius:16px; padding:1.4rem 1.5rem; margin:.5rem 0 1rem; }
+  .hero h1{ margin:0; font-size:1.5rem; } .hero p{ margin:.4rem 0 0; color:#e8f4f2; font-size:.95rem; }
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:14px;
+         padding:1.1rem 1.2rem; margin-bottom:1rem; }
+  .disclaimer{ background:#FFF4E5; border:1px solid #F2C879; color:#7a5a12;
+               border-radius:10px; padding:.7rem 1rem; font-size:.9rem; margin-bottom:1rem; }
+  button.upload{ background:var(--teal); color:#fff; border:0; border-radius:10px;
+                 padding:.8rem 1.2rem; font-size:1rem; cursor:pointer; width:100%; }
+  input[type=file]{ display:none; }
+  .status{ font-size:.9rem; color:var(--muted); margin-top:.6rem; }
+  .status.ok{ color:#1b7f6e; } .status.err{ color:#b23b3b; }
+  .grid{ display:grid; grid-template-columns:1fr; gap:1rem; }
+  @media(min-width:680px){ .grid.two{ grid-template-columns:1fr 1fr; } }
+  img.preview, canvas{ width:100%; border-radius:10px; display:block; background:#000; }
+  .grade{ font-size:1.8rem; font-weight:700; color:#264653; margin:.2rem 0 0; }
+  .pill{ display:inline-block; padding:.15rem .6rem; border-radius:999px; font-size:.85rem; margin-top:.4rem; }
+  .pill.ok{ background:#e6f5f1; color:#1b7f6e; } .pill.warn{ background:#fdeede; color:#a05a12; }
+  .bar-row{ display:grid; grid-template-columns:130px 1fr 48px; align-items:center; gap:.5rem; font-size:.85rem; margin:.25rem 0; }
+  .bar{ background:#eef2f2; border-radius:6px; height:12px; overflow:hidden; }
+  .bar>span{ display:block; height:100%; background:var(--teal); }
+  .pct{ text-align:right; color:var(--muted); }
+  table{ width:100%; border-collapse:collapse; font-size:.9rem; }
+  th,td{ text-align:left; padding:.4rem .3rem; border-bottom:1px solid var(--line); }
+  .dot{ display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:.4rem; vertical-align:middle; }
+  .muted{ color:var(--muted); font-size:.85rem; }
+  h3{ margin:.2rem 0 .6rem; }
+  code{ background:#eef2f2; padding:.1rem .3rem; border-radius:4px; font-size:.85em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <h1>🩺 Diabetic Retinopathy Detector</h1>
+    <p>Upload a retinal fundus photo. It predicts a severity grade (0–4), shows where the
+       model looked, and highlights the classic lesions — all in your browser.</p>
+  </div>
+
+  <div class="disclaimer">⚠️ <b>Not a medical device.</b> Educational / portfolio project,
+    no clinical claims. Expects proper fundus (back-of-the-eye) photographs, not ordinary
+    photos of an eye. Everything runs locally in your browser — no image is uploaded anywhere.</div>
+
+  <div class="card">
+    <label for="fileInput"><button class="upload" type="button"
+      onclick="document.getElementById('fileInput').click()">📷 Choose a fundus image</button></label>
+    <input id="fileInput" type="file" accept="image/*" />
+    <div id="status" class="status">Loading…</div>
+  </div>
+
+  <div id="results" style="display:none">
+    <div class="grid two">
+      <div class="card">
+        <h3>Input</h3>
+        <img id="inputPreview" class="preview" alt="input" />
+      </div>
+      <div class="card">
+        <h3>Grade</h3>
+        <p id="grade" class="grade">—</p>
+        <div id="confidence" class="muted"></div>
+        <span id="referable" class="pill"></span>
+        <div style="margin-top:.8rem"><b class="muted">Probability by grade</b></div>
+        <div id="probs"></div>
+      </div>
+    </div>
+
+    <div id="camSection" class="card" style="display:none">
+      <h3>Where the model looked (activation heatmap)</h3>
+      <div id="camWrap"></div>
+      <p class="muted">Warm colours = more influential to the grade. This is a coarse
+        localiser and shows correlation, not clinical proof.</p>
+    </div>
+
+    <div id="lesionSection" class="card" style="display:none">
+      <h3>Lesion map — where the signs are</h3>
+      <div class="grid two">
+        <div id="lesionWrap"></div>
+        <div>
+          <table id="lesionTable"></table>
+          <p class="muted" style="margin-top:.6rem">Colours: microaneurysms red · haemorrhages
+            orange · hard exudates yellow · soft exudates cyan. Model predictions meant to point a
+            clinician toward regions to inspect — not a diagnosis.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>About</h3>
+    <p class="muted">Two models run entirely on your device: an EfficientNet classifier for the
+      0–4 grade and a U-Net that segments four lesion types. Source code and training pipeline:
+      <a href="https://github.com/RohinDaCoder23/Diabetic-Retinopathy-Application">GitHub repository</a>.
+      If analysis reports missing models, the <code>.onnx</code> files still need to be added to
+      <code>docs/models/</code> (see the repo's deployment guide).</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/ort.min.js"></script>
+<script>
+  function cvLoaded(){
+    try{
+      if (typeof cv !== "undefined" && cv && typeof cv.then === "function"){
+        cv.then(function(m){ window.cv = m; window.onOpenCvReady(); });
+      } else if (typeof cv !== "undefined" && cv.getBuildInformation){
+        window.onOpenCvReady();
+      } else if (typeof cv !== "undefined"){
+        cv["onRuntimeInitialized"] = window.onOpenCvReady;
+      }
+    }catch(e){ console.error(e); }
+  }
+</script>
+<script async src="https://docs.opencv.org/4.10.0/opencv.js" onload="cvLoaded()"></script>
+<script src="./app.js"></script>
+</body>
+</html>
